@@ -26,6 +26,7 @@ const HomePage: FC = () => {
   const offscreenImage = useRef<HTMLImageElement | null>(null);
   // const blueNoiseImage = useRef<HTMLImageElement | null>(null);
   const videoEl = useRef<HTMLVideoElement | null>(null);
+  const videoShouldPlay = useRef<boolean>(false);
   useEffect(() => {
     // Create and load the blue-noise image
     const img = new Image();
@@ -105,7 +106,7 @@ const HomePage: FC = () => {
       const baseX = (rect.width - drawWidth) / 2;
       const baseY = (rect.height - drawHeight) / 2;
 
-      if (videoEl.current) {
+      if (videoEl.current && videoShouldPlay.current) {
         ctx.drawImage(videoEl.current, baseX, baseY, drawWidth, drawHeight);
         videoEl.current.play().then(() => {
           requestAnimationFrame(draw);
@@ -211,16 +212,26 @@ const HomePage: FC = () => {
     if (!el) return;
     const observer = new IntersectionObserver(([entry]) => {
       if (entry.isIntersecting) {
-        const video = document.createElement('video');
-        video.src = '/videos/f3.mp4';
-        video.muted = true;
-        video.autoplay = true;
-        video.loop = true;
-        video.playsInline = true;
+        if (!videoEl.current) {
+          const video = document.createElement('video');
+          video.src = '/videos/f3.mp4';
+          video.muted = true;
+          video.autoplay = true;
+          video.loop = true;
+          video.playsInline = true;
 
-        video.addEventListener('loadeddata', () => {
-          videoEl.current = video;
-        })
+          video.addEventListener('loadeddata', () => {
+            videoEl.current = video;
+            videoShouldPlay.current = true;
+          })
+        } else {
+          videoShouldPlay.current = true;
+        }
+      } else {
+        if (videoEl.current) {
+          videoEl.current.pause();
+        }
+        videoShouldPlay.current = false;
       }
     }, {
       // root: el,
