@@ -5,7 +5,7 @@ import '@/assets/css/index.css';
 import '@/assets/css/keyframes.css';
 
 // PAGES
-const HomePage = lazy(() => import('@/pages/home'))
+const HomePage = lazy(() => import('@/pages/home/index'))
 
 function App() {
   return (

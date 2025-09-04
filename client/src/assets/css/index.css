@@ -48,7 +48,7 @@ html {
 body, #root {
   min-height: 100vh;
   background: #000;
-
+  font-family: 'Warbler Text';
 }
 
 * {
@@ -81,4 +81,7 @@ body, #root {
   /* colors */
   --color-background-1: #EBEBEB;
   /* font */
+  --font-warbler-deck: 'Warbler Deck';
+  --font-warbler-text: 'Warbler Text';
+  --font-pt-mono: 'PT mono';
 }
