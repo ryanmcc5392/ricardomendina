@@ -7,15 +7,15 @@ interface Link {
   text: string;
 }
 
-const glitchColors = [
-  [0, 0, 0],      // black
-  [255, 255, 255],// white
-  [255, 0, 0],    // red
-  [0, 255, 0],    // green
-  [0, 0, 255],    // blue
-  [0, 255, 255],  // cyan
-  [255, 0, 255],  // magenta
-];
+// const glitchColors = [
+//   [0, 0, 0],      // black
+//   [255, 255, 255],// white
+//   [255, 0, 0],    // red
+//   [0, 255, 0],    // green
+//   [0, 0, 255],    // blue
+//   [0, 255, 255],  // cyan
+//   [255, 0, 255],  // magenta
+// ];
 
 const LINKS: Link[] = [
   { id: 1, location: '#', text: 'Reel' },
@@ -352,8 +352,8 @@ const HomePage: FC = () => {
       observer.disconnect();
     }
   }, []);
-  const maxBlur = 50; // maximum blur in px
-  const scrollFactor = 0.05; // how quickly blur increases with scroll
+  // const maxBlur = 50; // maximum blur in px
+  // const scrollFactor = 0.05; // how quickly blur increases with scroll
   return (
     <>
       <main 
