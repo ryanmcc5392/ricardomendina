@@ -7,19 +7,28 @@ uniform float uMaxOffset;      // max horizontal offset
 uniform float uIntensity;      // 0 = few glitches, 1 = lots
 
 varying vec2 vUv;
+varying vec3 vPosition;
+
+// Simple pseudo-random function
+float rand(float x){
+    return fract(sin(x) * 43758.5453);
+}
 
 void main() {
     vUv = uv;
 
-    vec4 modelPosition = modelMatrix * vec4(position, 1.0);
+    vec3 newPosition = position;
+    newPosition.z -= pow((uv.x - 0.5), 2.0) * uScrollProgress * 0.3;
+    newPosition.z -= pow((uv.y - 0.5), 2.0) * uScrollProgress * 0.3;
+    vec4 modelPosition = modelMatrix * vec4(newPosition, 1.0);
     vec4 modelNormal = modelMatrix * vec4(normal, 0.0);
 
     // Segment count along Y
-    float frequency = 40.0; // more segments
+    float frequency = mix(25.0, (uScrollProgress / 0.35 * 50.0), rand(uTime));
     float segmentId = floor(modelPosition.y * frequency);
 
     // Random seed per segment
-    float randSeed = random2D(vec2(segmentId, floor(uTime * 5.0))); 
+    float randSeed = random2D(vec2(segmentId, floor(uTime * 5.0 * (uScrollProgress + 0.5)))); 
 
     // Only glitch some segments based on intensity
     if(randSeed < uIntensity) {
@@ -30,4 +39,5 @@ void main() {
 
     // Final position
     gl_Position = projectionMatrix * viewMatrix * modelPosition;
+    vPosition = modelPosition.xyz;
 }

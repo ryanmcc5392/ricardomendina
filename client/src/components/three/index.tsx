@@ -1,21 +1,15 @@
-import { FC, useMemo, useRef } from 'react';
+import { FC } from 'react';
 import { PerspectiveCamera } from '@react-three/drei';
-import { Canvas, useFrame } from '@react-three/fiber';
-import * as THREE from 'three';
+import { Canvas } from '@react-three/fiber';
 
-import fragmentShader from '@/assets/shaders/fragmentShader.glsl';
-import vertexShader from '@/assets/shaders/vertexShader.glsl';
-
+// import { EffectComposer, Glitch } from '@react-three/postprocessing';
+// import { GlitchMode } from 'postprocessing';
+import { ScalablePlane } from './scalablePlane';
 interface Props {
   offscreenImage: HTMLImageElement;
   width: number;
   height: number;
-}
-
-function getScale(scrollY: number, maxScroll: number) {
-  const normalized = Math.min(Math.max(scrollY / maxScroll, 0), 1);
-  const scale = 1 - normalized * 0.35;
-  return Math.max(0.6, Math.min(1, scale));
+  videoShouldPlay: boolean;
 }
 
 function getCameraZ(fovDeg: number, planeHeight: number) {
@@ -23,77 +17,39 @@ function getCameraZ(fovDeg: number, planeHeight: number) {
   return planeHeight / (2 * Math.tan(fovRad / 2));
 }
 
-// ScalablePlane component
-const ScalablePlane: FC<Props> = ({ offscreenImage }) => {
-  const meshRef = useRef<THREE.Mesh>(null);
-
-  // Create texture
-  const texture = useMemo(() => {
-    const tex = new THREE.Texture(offscreenImage);
-    tex.needsUpdate = true;
-    return tex;
-  }, [offscreenImage]);
-
-  // Shader material
-  const material = useMemo(
-    () =>
-      new THREE.ShaderMaterial({
-        fragmentShader,
-        uniforms: {
-          uIntensity: {value: 0.025},
-          uMaxOffset: {value: 0.4},
-          uScrollProgress: { value: 0 },
-          uTexture: { value: texture },
-          uTime: { value: 0 },
-        },
-        vertexShader,
-      }),
-    [texture]
-  );
-
-  // Compute plane geometry to match image aspect ratio
-  const imageAspect = offscreenImage.width / offscreenImage.height;
-  const planeWidth = imageAspect >= 1 ? imageAspect : 1;
+export const Scene: FC<Props> = ({ width, height, offscreenImage, videoShouldPlay }) => {
+  const imageAspect = width / height;
   const planeHeight = imageAspect >= 1 ? 1 : 1 / imageAspect;
 
-  useFrame((_, delta) => {
-    if (!meshRef.current) return;
-
-    // Scale based on scroll
-    const scrollY = window.scrollY;
-    const scale = getScale(scrollY, window.innerHeight);
-    meshRef.current.scale.set(scale, scale, 1);
-
-    // Update uniforms
-    material.uniforms.uScrollProgress.value = 1.0 - scale;
-    material.uniforms.uTime.value += delta;
-  });
+  const cameraZ = getCameraZ(45, planeHeight);
 
   return (
-    <mesh ref={meshRef}>
-      <planeGeometry args={[planeWidth, planeHeight, 256, 256]} />
-      <primitive attach='material' object={material} />
-    </mesh>
-  );
-};
+    <>
+      <Canvas className='absolute inset-0 w-full h-full' dpr={Math.min(window.devicePixelRatio, 2)}>
+        <PerspectiveCamera
+          far={100}
+          fov={45}
+          makeDefault
+          near={0.1}
+          position={[0, 0, cameraZ]}
+        />
+        <ScalablePlane
+          height={height}
+          offscreenImage={offscreenImage}
+          videoShouldPlay={videoShouldPlay}
+          width={width}
+        />
+        {/* <EffectComposer>
+        <Glitch
+          delay={[1.5, 3.5]}        // min and max glitch delay
+          duration={[0.1, 0.2]}     // min and max glitch duration
+          mode={GlitchMode.SPORADIC} // CONSTANT | SPORADIC
+          ratio={0.1}              // how often big glitches happen
+          strength={[0.1, 0.9]}     // glitch strength
+        />
+      </EffectComposer> */}
+      </Canvas>
+    </>
 
-// Scene component
-export const Scene: FC<Props> = ({ width, height, offscreenImage }) => {
-
-  const imageAspect = width / width;
-  const planeHeight = imageAspect >= 1 ? 1 : 1 / imageAspect;
-
-  const cameraZ = getCameraZ(45, planeHeight); // 45 is your FOV
-  return (
-    <Canvas className='absolute inset-0 w-full h-full' dpr={Math.min(window.devicePixelRatio, 2)}>
-      <PerspectiveCamera
-        far={100}
-        fov={45}
-        makeDefault
-        near={0.1}
-        position={[0, 0, cameraZ]} // dynamically computed
-      />
-      <ScalablePlane height={height} offscreenImage={offscreenImage} width={width} />
-    </Canvas>
   );
 };

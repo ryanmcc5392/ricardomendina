@@ -21,8 +21,7 @@ const HomePage: FC = () => {
   const container = useRef<HTMLDivElement>(null);
   const canvasContainer = useRef<HTMLDivElement | null>(null);
   const [offscreenImage, setOffscreenImage]= useState<HTMLImageElement | null>(null);
-  const videoEl = useRef<HTMLVideoElement | null>(null);
-  const videoShouldPlay = useRef<boolean>(false);
+  const [videoShouldPlay, setVideoShouldPlay] = useState(false);
 
   // Store canvas container size
   const [canvasSize, setCanvasSize] = useState<{ width: number; height: number } | null>(null);
@@ -38,7 +37,6 @@ const HomePage: FC = () => {
         useCORS: true,
         width: el.offsetWidth,
       }).then((canvasCapture) => {
-        console.log(canvasCapture)
         const baseImg = new Image();
         baseImg.src = canvasCapture.toDataURL();
         setOffscreenImage(baseImg);
@@ -77,24 +75,9 @@ const HomePage: FC = () => {
     if (!el) return;
     const observer = new IntersectionObserver(([entry]) => {
       if (entry.isIntersecting) {
-        if (!videoEl.current) {
-          const video = document.createElement('video');
-          video.src = '/videos/f3.mp4';
-          video.muted = true;
-          video.autoplay = true;
-          video.loop = true;
-          video.playsInline = true;
-
-          video.addEventListener('loadeddata', () => {
-            videoEl.current = video;
-            videoShouldPlay.current = true;
-          });
-        } else {
-          videoShouldPlay.current = true;
-        }
+        setVideoShouldPlay(true);
       } else {
-        if (videoEl.current) videoEl.current.pause();
-        videoShouldPlay.current = false;
+        setVideoShouldPlay(false);
       }
     }, {
       rootMargin: '0px',
@@ -110,7 +93,7 @@ const HomePage: FC = () => {
 
   return (
     <>
-      <main className='w-full h-[200dvh]' ref={parent}>
+      <main className='w-full' ref={parent}>
         <section className='sticky top-0 h-[100dvh] w-full flex items-center justify-center'>
           <div
             className='grid grid-cols-10 h-[100dvh] w-full bg-background-1 relative z-[1]'
@@ -154,13 +137,21 @@ const HomePage: FC = () => {
           >
             {/* Only render Scene once we have canvas size */}
             {canvasSize && offscreenImage && (
-              <Scene height={canvasSize.height} offscreenImage={offscreenImage} width={canvasSize.width} />
+              <Scene 
+                height={canvasSize.height} 
+                offscreenImage={offscreenImage} 
+                videoShouldPlay={videoShouldPlay}
+                width={canvasSize.width} 
+              />
             )}
           </section>
         </section>
+        {/* filler sections for scrolling */}
+        <section className='w-full h-[100dvh]' />
+        <div className='w-full h-[1px' ref={scroll} />
+        <section className='w-full h-[100dvh]' />
       </main>
 
-      <div className='w-full h-[1px]' ref={scroll} />
     </>
   );
 };

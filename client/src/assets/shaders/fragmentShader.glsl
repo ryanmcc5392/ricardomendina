@@ -1,16 +1,19 @@
 precision mediump float;
 
+uniform sampler2D uNoise;
 uniform sampler2D uTexture;
+uniform float uShowNoise;
 uniform float uScrollProgress;
-uniform float uTime; // time-based animation
+uniform float uTime;
 varying vec2 vUv;
+varying vec3 vPosition;
 
-// Pseudo-random function for grain
+// Pseudo-random function
 float rand(vec2 co){
     return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);
 }
 
-// Multi-sample blur function
+// Multi-sample blur
 vec3 blurSample(vec2 uv, float strength) {
     vec3 col = vec3(0.0);
     float total = 0.0;
@@ -25,21 +28,21 @@ vec3 blurSample(vec2 uv, float strength) {
 }
 
 void main() {
-    float disp = uScrollProgress * 0.5;
+    float disp = uScrollProgress * 1.2;
 
-    // --- Compute radial factor ---
+    // --- Radial factor ---
     vec2 center = vec2(0.5);
     float distFromCenter = distance(vUv, center);
-    float radialFactor = smoothstep(0.0, 0.5, distFromCenter); // 0 center, 1 edges
+    float radialFactor = smoothstep(0.0, 0.4, distFromCenter);
 
-    // --- Edge gradient for orange overlay ---
-    float edgeFactor = smoothstep(0.03, 0.0, vUv.x);       // left edge
-    edgeFactor += smoothstep(0.97, 1.0, vUv.x);            // right edge
+    // --- Edge gradient for overlay ---
+    float edgeFactor = smoothstep(0.035, 0.0, vUv.x);
+    edgeFactor += smoothstep(0.965, 1.0, vUv.x);
     edgeFactor = clamp(edgeFactor, 0.0, 1.0) * uScrollProgress;
 
-    // --- Strengths scaled by radial factor ---
-    float distortionStrength = disp * 0.03 * radialFactor;
-    float grainStrength = disp * 0.008 * radialFactor;
+    // --- Distortion / grain / blur strengths ---
+    float distortionStrength = disp * 0.025 * radialFactor;
+    float grainStrength = disp * 0.015 * radialFactor;
     float blurStrength = disp * 0.015 * radialFactor;
 
     // --- Chromatic separation ---
@@ -52,11 +55,11 @@ void main() {
         (rand(vUv * disp * 15.0) - 0.5 + 0.02 * cos(uTime * 7.0)) * grainStrength
     );
 
-    // --- Subtle glitch horizontal shift ---
+    // --- Subtle horizontal glitch ---
     float glitchShift = (rand(vec2(uTime * 10.0, vUv.y)) - 0.5) * distortionStrength * 0.5;
 
-    // --- Sample blurred texture ---
-    vec3 texBlur = blurSample(vUv + grainOffset + vec2(glitchShift, 0.0), blurStrength);
+    // --- Blurred texture ---
+    vec3 texBlur = blurSample(vUv + grainOffset + vec2(glitchShift, 0.0), blurStrength); 
 
     // --- Chromatic shift ---
     float r = texture2D(uTexture, vUv + offsetR + grainOffset + vec2(glitchShift, 0.0)).r;
@@ -64,23 +67,49 @@ void main() {
     float b = texture2D(uTexture, vUv + offsetB + grainOffset - vec2(glitchShift, 0.0)).b;
 
     vec3 baseTex = vec3(r, g, b);
-
-    // --- Wavy black lines ---
-    float frequency = 10.0;
-    float amplitude = 0.02;
-    float speed = 2.0;
-    float wave = sin(vUv.x * frequency + uTime * speed) * amplitude;
-
-    float lineStrength = mod(vUv.y * 50.0 + wave, 1.0);
-    lineStrength = lineStrength < 0.5 ? 0.0 : 0.0; // keep subtle, almost invisible
-    baseTex.rgb -= lineStrength;
-
-    vec3 orange = vec3(235.0/255.0, 146.0/255.0, 95.0/255.0);;
+    
+    // --- Overlay gradient ---
+    vec3 orange = vec3(235.0/255.0, 146.0/255.0, 95.0/255.0);
     vec3 yellow = vec3(235.0/255.0, 221.0/255.0, 136.0/255.0);
-    vec3 overlayColor = vec3(249.0/255.0, 244.0/255.0, 178.0/255.0);
-    float distanceFromMaxGradient = smoothstep(0.5, 0.49, abs(0.5 - vUv.x));
+    float distanceFromMaxGradient = smoothstep(0.5, 0.485, abs(0.5 - vUv.x));
     vec3 gradient = mix(orange, yellow, distanceFromMaxGradient);
-    //baseTex = mix(baseTex, overlayColor, uScrollProgress);
-    baseTex = mix(baseTex, gradient, edgeFactor * 3.7);
+    baseTex = mix(baseTex, gradient, edgeFactor * 3.0);
+
+    // add lines
+    float stripes = mod((vPosition.y - uTime * 0.005) * 75.0 / uScrollProgress, 1.0);
+    stripes = pow(stripes, 2.5);
+    baseTex.rgb -= stripes * uScrollProgress * 0.75;
+
+    // --- TV STATIC EFFECT ---
+    vec2 noiseUV = vUv * 1.5; // less repetition
+
+    // subtle vertical movement
+    noiseUV.y -= sin(uTime * 0.01);
+
+    // random glitch jumps
+    float glitch = step(0.8, fract(sin(uTime * 10.0) * 43758.5453));
+    noiseUV += glitch * vec2(0.1, 0.0);
+
+    // wrap UVs
+    noiseUV = fract(noiseUV);
+
+    // add row-based jitter for glitchiness
+    float rowJitter = step(0.8, fract(vUv.y * 50.0 + uTime * 0.01)) * 0.1;
+    noiseUV.x += rowJitter;
+
+    // RGB separation
+    vec2 offsetRNoise = vec2(0.01 * sin(uTime * 0.9), 0.0);
+    vec2 offsetGNoise = vec2(-0.01 * cos(uTime * 0.75), 0.0);
+    vec2 offsetBNoise = vec2(0.015 * sin(uTime * 0.67), 0.0);
+
+    float rNoise = texture2D(uNoise, fract(noiseUV + offsetRNoise)).r;
+    float gNoise = texture2D(uNoise, fract(noiseUV + offsetGNoise)).g;
+    float bNoise = texture2D(uNoise, fract(noiseUV + offsetBNoise)).b;
+
+    vec3 noiseTexture = vec3(rNoise, gNoise, bNoise);
+
+    // blend with base texture
+    baseTex = mix(baseTex, noiseTexture, uShowNoise);
+
     gl_FragColor = vec4(baseTex, 1.0);
 }
