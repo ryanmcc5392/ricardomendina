@@ -5,7 +5,7 @@ uniform float uTime;           // animation time
 uniform float uScrollProgress; // scales glitch strength
 uniform float uMaxOffset;      // max horizontal offset
 uniform float uIntensity;      // 0 = few glitches, 1 = lots
-
+uniform float uMaxGlitchSize;
 varying vec2 vUv;
 varying vec3 vPosition;
 
@@ -24,7 +24,7 @@ void main() {
     vec4 modelNormal = modelMatrix * vec4(normal, 0.0);
 
     // Segment count along Y
-    float frequency = mix(25.0, (uScrollProgress / 0.35 * 50.0), rand(uTime));
+    float frequency = mix(uMaxGlitchSize / 2.0, (uScrollProgress / 0.35 * uMaxGlitchSize), rand(uTime));
     float segmentId = floor(modelPosition.y * frequency);
 
     // Random seed per segment

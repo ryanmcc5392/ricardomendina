@@ -2,6 +2,12 @@ precision mediump float;
 
 uniform sampler2D uNoise;
 uniform sampler2D uTexture;
+uniform float uRadiusDropOff;
+uniform float uBlurStrength;
+uniform float uGrainStrength;
+uniform float uRGBShift;
+uniform vec3 uGradientColor1;
+uniform vec3 uGradientColor2;
 uniform float uShowNoise;
 uniform float uScrollProgress;
 uniform float uTime;
@@ -33,7 +39,7 @@ void main() {
     // --- Radial factor ---
     vec2 center = vec2(0.5);
     float distFromCenter = distance(vUv, center);
-    float radialFactor = smoothstep(0.0, 0.4, distFromCenter);
+    float radialFactor = smoothstep(0.0, uRadiusDropOff, distFromCenter);
 
     // --- Edge gradient for overlay ---
     float edgeFactor = smoothstep(0.035, 0.0, vUv.x);
@@ -41,9 +47,9 @@ void main() {
     edgeFactor = clamp(edgeFactor, 0.0, 1.0) * uScrollProgress;
 
     // --- Distortion / grain / blur strengths ---
-    float distortionStrength = disp * 0.025 * radialFactor;
-    float grainStrength = disp * 0.015 * radialFactor;
-    float blurStrength = disp * 0.015 * radialFactor;
+    float distortionStrength = disp * uRGBShift * radialFactor;
+    float grainStrength = disp * uGrainStrength * radialFactor;
+    float blurStrength = disp * uBlurStrength * radialFactor;
 
     // --- Chromatic separation ---
     vec2 offsetR = vec2(-distortionStrength * (0.5 + 0.5 * sin(disp + uTime * 2.0)), 0.0);
@@ -69,10 +75,8 @@ void main() {
     vec3 baseTex = vec3(r, g, b);
     
     // --- Overlay gradient ---
-    vec3 orange = vec3(235.0/255.0, 146.0/255.0, 95.0/255.0);
-    vec3 yellow = vec3(235.0/255.0, 221.0/255.0, 136.0/255.0);
     float distanceFromMaxGradient = smoothstep(0.5, 0.485, abs(0.5 - vUv.x));
-    vec3 gradient = mix(orange, yellow, distanceFromMaxGradient);
+    vec3 gradient = mix(uGradientColor1, uGradientColor2, distanceFromMaxGradient);
     baseTex = mix(baseTex, gradient, edgeFactor * 3.0);
 
     // add lines

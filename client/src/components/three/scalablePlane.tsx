@@ -1,5 +1,6 @@
 import { FC, useEffect,useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
+import * as dat from 'dat.gui';
 import * as THREE from 'three';
 
 // @ts-expect-error glsl
@@ -87,9 +88,16 @@ export const ScalablePlane: FC<Props> = ({ offscreenImage, videoShouldPlay }) =>
     return new THREE.ShaderMaterial({
       fragmentShader,
       uniforms: {
+        uBlurStrength: { value: 0.015 },
+        uGradientColor1: { value: new THREE.Color(235/255, 146/255, 95/255) },
+        uGradientColor2: { value: new THREE.Color(235/255, 221/255, 136/255) },
+        uGrainStrength: { value: 0.015 },
         uIntensity: { value: 0.03 },
+        uMaxGlitchSize: {value: 50.0},
         uMaxOffset: { value: 0.1 },
         uNoise: { value: noise },
+        uRadiusDropOff: { value: 0.4 },
+        uRGBShift: { value: 0.025 },
         uScrollProgress: { value: 0 },
         uShowNoise: {value: 0},
         uTexture: { value: imageTexture }, // start with image
@@ -185,6 +193,49 @@ export const ScalablePlane: FC<Props> = ({ offscreenImage, videoShouldPlay }) =>
     material.uniforms.uTime.value += delta;
 
   });
+
+  // GUI for Tweaks
+  useEffect(() => {
+    const gui = new dat.GUI();
+
+    const uniforms = material.uniforms as {
+      uBlurStrength: { value: number };
+      uGrainStrength: { value: number };
+      uIntensity: { value: number };
+      uMaxOffset: { value: number };
+      uMaxGlitchSize: { value: number };
+      uRadiusDropOff: { value: number };
+      uRGBShift: { value: number };
+      uGradientColor1: {value: THREE.Color}
+      uGradientColor2: {value:  THREE.Color}
+    };
+
+    gui.add(uniforms.uBlurStrength, 'value', 0, 0.1, 0.001).name('Blur Strength');
+    gui.add(uniforms.uGrainStrength, 'value', 0, 0.1, 0.001).name('Grain Strength');
+    gui.add(uniforms.uIntensity, 'value', 0, 0.2, 0.001).name('Glitch Frequency');
+    gui.add(uniforms.uMaxOffset, 'value', 0, 2.0, 0.01).name('Max Glitch Offset');
+    gui.add(uniforms.uMaxGlitchSize, 'value', 0, 100.0, 1).name('Glitch sections');
+    gui.add(uniforms.uRadiusDropOff, 'value', 0, 1.0, 0.01).name('Radius DropOff');
+    gui.add(uniforms.uRGBShift, 'value', 0, 0.2, 0.001).name('RGB Shift');
+
+    const colorSettings = {
+      gradientColor1: `#${uniforms.uGradientColor1.value.getHexString()}`,
+      gradientColor2: `#${uniforms.uGradientColor2.value.getHexString()}`
+    };
+
+    // Add GUI controls
+    gui.addColor(colorSettings, 'gradientColor1').name('Gradient Color 1').onChange((val: string) => {
+      uniforms.uGradientColor1.value.set(val);
+    });
+
+    gui.addColor(colorSettings, 'gradientColor2').name('Gradient Color 2').onChange((val: string) => {
+      uniforms.uGradientColor2.value.set(val);
+    });
+
+    return () => {
+      gui.destroy();
+    };
+  }, [material]);
 
   return (
     <mesh ref={meshRef}>
